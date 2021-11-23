@@ -18,8 +18,9 @@ class Olympus:
     def market_cap(self, price):
         return self.ohm_supply * price
 
-    def dashboard(self, price):
+    def dashboard(self, day, price):
         print((
+            f'Day {day: >2} | '
             f'Treasury: ${self.treasury:,.0f}, '
             f'Supply: {self.ohm_supply:,.0f} OHM, '
             f'Price: ${price:,.2f}, '
@@ -41,5 +42,8 @@ class Olympus:
 
     def rebase(self, price):
         to_be_minted = self.profit / price
+        roi = to_be_minted / self.ohm_supply
+        apy = (1+roi)**365 - 1
         self.profit = 0
         self.mint(to_be_minted)
+        logger.info(f'REBASE: rewards={to_be_minted:,.0f}, ROI={roi:,.2%}, APY={apy:,.2%}')

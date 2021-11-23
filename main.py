@@ -1,16 +1,20 @@
 from olympus import Olympus
 
+def main():
+    ohm = Olympus(supply=1_000_000)
 
-ohm = Olympus(ohm_supply=1_000_000)
 
-for day in range(1, 31):
-    price = 500
+    N = 30
+    for epoch in range(1, N+1):
+        # market
+        with ohm(epoch, price=100.0) as project:
+            # simulate the bonding amount
+            amount = (N-epoch+1)/N*0.25 * ohm.treasury
+            # someone do 1,1 (bonding)
+            project.bond(amount)
 
-    # someone do 1,1 (bonding)
-    ohm.bond(ohm.market_cap(price)*0.02)
+            # assume everybody 3,3 (staking)
+            pass
 
-    # assume everybody 3,3 (staking)
-    ohm.rebase(price)
-
-    # status at the end of period
-    ohm.dashboard(day, price)
+if __name__ == '__main__':
+    main()

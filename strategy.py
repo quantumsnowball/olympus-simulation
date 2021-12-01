@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 class StrategyResult(NamedTuple):
     roi: float
+    apy: float
     balance: List[Any]
 
 
@@ -46,8 +47,9 @@ def staking(principal: float, price: float, *,
         inputs=repeat(price, period))
     # metrics
     roi = multiple**period - 1
+    apy = (1+roi)**(365/period_len) - 1
     # bundle as result
-    return StrategyResult(roi=roi, balance=balance)
+    return StrategyResult(roi=roi, apy=apy, balance=balance)
 
 
 def bonding_with_restake(principal: float, price: float, *,
@@ -100,8 +102,9 @@ def bonding_with_restake(principal: float, price: float, *,
         inputs=inputs)
     # metrics
     roi = balance[-1].value/principal-1
+    apy = (1+roi)**(365/period_len) - 1
     # bundle as result
-    return StrategyResult(roi=roi, balance=balance)
+    return StrategyResult(roi=roi, apy=apy, balance=balance)
 
 
 def demo():

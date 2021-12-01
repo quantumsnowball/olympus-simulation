@@ -52,33 +52,52 @@ def staking(principal: float, price: float, *,
 
 def bonding_with_restake(principal: float, price: float, *,
                          rebase_rate: float, bond_discount: float,
+                         restake_schedule: List[bool] = None,
                          period_len: int = 5, rebase_per_day: int = 3, fee: float = 0.2) -> StrategyResult:
+    # some constant
+    period = period_len * rebase_per_day
+    # defaults
+    if not restake_schedule:
+        restake_schedule = [True] * period
+    # check valid inputs
+    assert len(restake_schedule) == period, 'restake_schedule must match period length'
     # types
     class Row(NamedTuple):
         bonded: float
+        notstaked: float
         staked: float
         value: float
-    # some constant
-    period = period_len * rebase_per_day
+    # some cals
     multiple = (1+rebase_rate/100)
     bond_price = price / (1+bond_discount/100)
     bonded = principal/bond_price
     period_vest = bonded / period
+    inputs = zip([price]*period, [period_vest]*period, restake_schedule)
 
     # what happen over one period
-    def transactions(begin: Row, data: Tuple[float, float]) -> Row:
-        price, period_vest = data
+    def transactions(begin: Row, data: Tuple[float, float, bool]) -> Row:
+        price, period_vest, is_restaked = data
+        # vesting
         end_bonded = begin.bonded - period_vest
-        # end_staked = begin.staked*multiple + period_vest
-        end_staked = (begin.staked+period_vest-fee/price)*multiple
-        end_balance = end_bonded + end_staked
+        # claimable
+        end_notstaked = begin.notstaked + period_vest
+        # staking or not
+        if is_restaked:
+            end_staked = begin.staked + end_notstaked
+            end_notstaked = 0
+        else:
+            end_staked = begin.staked
+        # rebase
+        end_staked = (end_staked-fee/price)*multiple
+        # audit
+        end_balance = end_bonded + end_notstaked + end_staked
         end_value = end_balance * price - fee
-        return Row(end_bonded, end_staked, end_value)
+        return Row(end_bonded, end_notstaked, end_staked, end_value)
     # constructure the spreadsheet
     balance = spreadsheet(
-        initial=Row(bonded, 0, bonded*price),
+        initial=Row(bonded, 0, 0, bonded*price),
         transactions=transactions,
-        inputs=repeat((price, period_vest), period))
+        inputs=inputs)
     # metrics
     roi = balance[-1].value/principal-1
     # bundle as result
@@ -90,7 +109,9 @@ def demo():
     result = staking(10000, 8700, rebase_rate=0.9695)
     print(result)
     result = bonding_with_restake(
-        10000, 8700, rebase_rate=0.9695, bond_discount=6, fee=0.2)
+        10000, 8700, 
+        restake_schedule=[True]*15,
+        rebase_rate=0.9695, bond_discount=6, fee=0.2)
     print(result)
 
 
